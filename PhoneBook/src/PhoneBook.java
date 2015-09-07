@@ -1,6 +1,8 @@
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Scanner;
+import java.io.*;
+
 
 interface Input_Menu{
 	int Input=1, Search=2, Delete=3, Exit=4;
@@ -10,7 +12,7 @@ interface Input_Select{
 	int Normal=1, Univ=2, Company=3;
 }
 
-class PhoneInfo
+class PhoneInfo implements Serializable
 {
 	String name;
 	String phoneNumber;
@@ -43,7 +45,7 @@ class PhoneInfo
 	}
 }
 
-class PhoneUnivInfo extends PhoneInfo
+class PhoneUnivInfo extends PhoneInfo 
 {
 	String major;
 	int year;
@@ -64,7 +66,7 @@ class PhoneUnivInfo extends PhoneInfo
 	
 }
 
-class PhoneCompanyInfo extends PhoneInfo
+class PhoneCompanyInfo extends PhoneInfo 
 {
 	String company;
 	
@@ -85,22 +87,25 @@ class Manager
 {
 	/*final int MAX_CNT=100;
 	PhoneInfo[] InfoStorage = new PhoneInfo[MAX_CNT];
-	int CurCnt=0;*/
-	
+	int CurCnt=0;
+	*/
+	private final File datafile = new File("PhoneBook.dat");
 	HashSet<PhoneInfo> InfoStorage = new HashSet<PhoneInfo>();
-		
-	static Manager instance = null;
 	
+	static Manager instance = null;
 	public static Manager createManagerInst() // Manager instance have to be only one constructed.
 	{
 		if(instance==null)
-		{
 			instance=new Manager();
-		}
 		return instance;
 	}
 	
-	public PhoneInfo readBasicInfo()
+	private Manager()
+	{
+		readFromFile();
+	}
+	
+	private PhoneInfo readBasicInfo()
 	{
 		System.out.print("이름 : ");
 		String _name = Menu.keyboard.nextLine();
@@ -111,7 +116,7 @@ class Manager
 		return new PhoneInfo(_name, _phone);
 	}
 	
-	public PhoneInfo readUnivInfo()
+	private PhoneInfo readUnivInfo()
 	{
 		System.out.print("이름 : ");
 		String _name = Menu.keyboard.nextLine();
@@ -171,12 +176,15 @@ class Manager
 			}
 
 			//InfoStorage[CurCnt++]=info;
-			
-			boolean addInfo = InfoStorage.add(info);
-			if(addInfo==true)
+			boolean isAdded = InfoStorage.add(info);
+			if(isAdded==true)
+			{
 				System.out.println("데이터 입력이 완료되었습니다.\n");
+			}
 			else
+			{
 				System.out.println("이미 저장된 데이터입니다.\n");
+			}
 			
 		}catch(ChoiceException e)
 		{
@@ -194,21 +202,10 @@ class Manager
 		System.out.print("이름  : ");
 		String _name = Menu.keyboard.nextLine();
 		
-		PhoneInfo info = search(_name);
+		//int sIdx = search(_name);
+		PhoneInfo sIdx = search(_name);
 		
-		if(info==null)
-		{
-			System.out.println("해당 데이터가 없습니다.\n");
-		}
-		else
-		{
-			info.ShowPhoneInfo();
-			System.out.println("데이터 검색이 완료되었습니다.\n");
-		}
-		/*int sIdx = search(_name);
-		
-		
-		if(sIdx == -1)
+		/*if(sIdx == -1)
 		{
 			System.out.println("해당 데이터가 없습니다.\n");
 		}
@@ -218,6 +215,17 @@ class Manager
 			System.out.println("데이터 검색이 완료되었습니다.\n");
 		}*/
 		
+		//Iterator<PhoneInfo> curInfo = InfoStorage.iterator();
+		
+		if(sIdx==null)
+		{
+			System.out.println("해당 데이터가 없습니다.\n");
+		}
+		else
+		{
+			sIdx.ShowPhoneInfo();
+			System.out.println("데이터 검색이 완료되었습니다.\n");
+		}
 	}
 	
 	public void Data_Delete()
@@ -226,23 +234,7 @@ class Manager
 		System.out.print("이름 : ");
 		String _name = Menu.keyboard.nextLine();
 		
-        Iterator<PhoneInfo> itr = InfoStorage.iterator();
-		
-		while(itr.hasNext())
-		{
-			PhoneInfo curInfo = itr.next();
-			if(_name.compareTo(curInfo.name)==0)
-			{
-				itr.remove();
-				System.out.println("데이터 삭제가 완료되었습니다.\n");
-				return;
-			}
-		}
-		
-		System.out.println("해당 데이터가 없습니다.\n");
-		
-		/*PhoneInfo Info = search(_name);
-    	int dIdx = search(_name);
+		/*int dIdx = search(_name);
 		if(dIdx==-1)
 		{
 			System.out.println("해당 데이터가 없습니다.\n");
@@ -254,6 +246,21 @@ class Manager
 			
 			System.out.println("데이터 삭제가 완료되었습니다.\n");
 		}*/
+		
+		Iterator<PhoneInfo> dItr = InfoStorage.iterator();
+		
+		while(dItr.hasNext())
+		{
+			PhoneInfo curInfo = dItr.next();
+			if(_name.compareTo(curInfo.name)==0){
+				dItr.remove();
+				System.out.println("데이터 삭제가 완료되었습니다.\n");
+				return;
+			}		
+		}
+		
+		System.out.println("해당 데이터가 없습니다.\n");
+			
 		
 		
 		
@@ -267,17 +274,70 @@ class Manager
 			if((InfoStorage[idx].name).compareTo(name)==0)
 				return idx;
 		}
-		*/
-		Iterator<PhoneInfo> itr = InfoStorage.iterator();
-		while(itr.hasNext())
+		
+		return -1;*/
+		
+		Iterator<PhoneInfo> search = InfoStorage.iterator();
+		
+		while(search.hasNext())
 		{
-			PhoneInfo curInfo = itr.next();
+			PhoneInfo curInfo = search.next();
 			if(name.compareTo(curInfo.name)==0)
 				return curInfo;
 		}
+		
 		return null;
 	}
+	
+	public void storeToFile()
+	{
+		try{
+			FileOutputStream DataStore = new FileOutputStream(datafile);
+			ObjectOutputStream out = new ObjectOutputStream(DataStore);
+		
+			Iterator<PhoneInfo> itr = InfoStorage.iterator();
+			while(itr.hasNext())
+				out.writeObject(itr.next());
+		
+			out.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
+	public void readFromFile()
+	{
+		if(datafile.exists()==false)
+			return;
+		
+		try{			
+			FileInputStream DataRead = new FileInputStream(datafile);
+			ObjectInputStream in = new ObjectInputStream(DataRead);
+			
+			while(true)
+			{
+				PhoneInfo info = (PhoneInfo)in.readObject();
+				if(info==null)
+					break;
+				InfoStorage.add(info);
+			}	
+			
+			in.close();
+		}
+		catch(IOException e)
+		{
+			return;
+		}
+		catch(ClassNotFoundException e)
+		{
+			return;
+		}
+		
+	}
 }
+
 
 class ChoiceException extends Exception
 {
@@ -293,6 +353,8 @@ class ChoiceException extends Exception
 		System.out.println(inputchoice+"에 해당하는 선택은 존재하지 않습니다.");
 	}
 }
+
+
 class Menu{
 	
 	public static Scanner keyboard = new Scanner(System.in);
@@ -326,7 +388,7 @@ class Menu{
 
 public class PhoneBook {
 	
-	public static void main(String[] args) throws ChoiceException
+	public static void main(String[] args)
 	{
 		boolean on_off = true;
 		int choice=0;	    
@@ -356,6 +418,7 @@ public class PhoneBook {
 		    			manager.Data_Delete();
 		    			break;
 		    		case Input_Menu.Exit:
+		    			manager.storeToFile();
 		    			System.out.println("프로그램이 종료되었습니다.");
 		    			System.out.println("");
 		    			on_off=false;
